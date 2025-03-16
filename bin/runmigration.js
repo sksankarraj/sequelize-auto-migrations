@@ -26,9 +26,10 @@ if (!process.env.PWD) {
     process.env.PWD = process.cwd();
 }
 
-const { migrationsDir, modelsDir } = pathConfig(options);
+const { migrationsDir, modelsDir } = await pathConfig(options);
+const modelsPath = `${modelsDir}/index.js`
 
-if (!fs.existsSync(modelsDir)) {
+if (!fs.existsSync(modelsPath)) {
     console.log("Can't find models directory. Use `sequelize init` to create it");
     process.exit(1);
 }
@@ -47,7 +48,7 @@ if (options.help) {
     process.exit(0);
 }
 
-const sequelize = (await import(modelsDir)).sequelize;
+const sequelize = (await import(modelsPath)).default.sequelize;
 const queryInterface = sequelize.getQueryInterface();
 
 const fromRevision = options.rev;
@@ -79,7 +80,8 @@ let fromPos = fromPosInitial;
 
 Async.eachSeries(
     migrationFiles,
-    async (file, cb) => {
+    async (file) => {
+    console.log(file,);
         console.log(`Execute migration from file: ${file}`);
         try {
             await new Promise((resolve, reject) => {
@@ -91,16 +93,15 @@ Async.eachSeries(
                     rollback,
                     (err) => {
                         if (stop) {
-                            return cb(new Error("Stopped"));
+                            return new Error("Stopped");
                         }
                         err ? reject(err) : resolve();
                     }
                 );
             });
             fromPos = 0; // Reset pos for next migration
-            cb();
         } catch (err) {
-            cb(err);
+            console.error(err);
         }
     },
     (err) => {

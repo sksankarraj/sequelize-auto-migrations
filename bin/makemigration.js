@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
 import commandLineArgs from 'command-line-args';
-import { js_beautify as beautify } from 'js-beautify';
+import beautify_obj from 'js-beautify';
 import * as migrate from '../lib/migrate.js';
 import pathConfig from '../lib/pathconfig.js';
 import fs from 'fs';
 import path from 'path';
 import _ from 'lodash';
+
+const {js_beautify: beautify} = beautify_obj;
 
 const optionDefinitions = [
     { name: 'preview', alias: 'p', type: Boolean, description: 'Show migration preview (does not change any files)' },
@@ -34,7 +36,7 @@ if (!process.env.PWD) {
     process.env.PWD = process.cwd();
 }
 
-const { migrationsDir, modelsDir } = pathConfig(options);
+const { migrationsDir, modelsDir } = await pathConfig(options);
 
 if (!fs.existsSync(modelsDir)) {
     console.log("Can't find models directory. Use `sequelize init` to create it");
@@ -62,7 +64,7 @@ try {
     // Silently ignore if file doesn't exist
 }
 
-const sequelize = (await import(modelsDir)).sequelize;
+const sequelize = (await import(modelsDir + '/index.js')).default.sequelize;
 const models = sequelize.models;
 
 currentState.tables = migrate.reverseModels(sequelize, models);
